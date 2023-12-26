@@ -103,13 +103,23 @@ public class RequestHandler extends Thread {
                 );
 
                 DataBase.addUser(user);
-                log.debug("User: {}", user);
+                response302Header(dos, "/index.html");
                 return;
             }
 
             byte[] body = "Hello World".getBytes();
             response200Header(dos, body.length);
             responseBody(dos, body);
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response302Header(DataOutputStream dos, String redirectUri) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found\r\n");
+            dos.writeBytes("Location: " + redirectUri + "\r\n"); // 리다이렉트할 URL을 여기에 넣으세요
+            dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }

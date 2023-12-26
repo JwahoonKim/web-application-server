@@ -26,10 +26,14 @@
 * 회원가입을 post 요청으로 변경한다.
 
 ### 요구사항 4 - redirect 방식으로 이동
-* 
+* 회원가입을 완료하면 /index.html로 이동한다.
+* 302 상태코드를 이용해 redirect 한다.
 
 ### 요구사항 5 - cookie
-* 
+* 로그인이 성공하면 /index.html로 이동
+* 로그인이 실패하면 /user/login_failed.html로 이동
+* 로그인 성공시 쿠키에 logined=true로 설정
+* 로그인 실패시 쿠키에 logined=false로 설정
 
 ### 요구사항 6 - stylesheet 적용
 * 
