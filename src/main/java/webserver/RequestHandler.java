@@ -156,9 +156,36 @@ public class RequestHandler extends Thread {
                 return;
             }
 
+            if (path.equals("/css/styles.css")) {
+                Path resourcePath = Paths.get("./webapp/css/styles.css");
+                byte[] body = Files.readAllBytes(resourcePath);
+                response200CssHeader(dos, body.length);
+                responseBody(dos, body);
+                return;
+            }
+
+            if (path.equals("/css/bootstrap.min.css")) {
+                Path resourcePath = Paths.get("./webapp/css/bootstrap.min.css");
+                byte[] body = Files.readAllBytes(resourcePath);
+                response200CssHeader(dos, body.length);
+                responseBody(dos, body);
+                return;
+            }
+
             byte[] body = "Hello World".getBytes();
             response200Header(dos, body.length);
             responseBody(dos, body);
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response200CssHeader(DataOutputStream dos, int length) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/css;charset=utf-8\r\n");
+            dos.writeBytes("Content-Length: " + length + "\r\n");
+            dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }

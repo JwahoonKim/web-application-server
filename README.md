@@ -39,8 +39,8 @@
 * 로그인 상태일 경우 /user/list.html로 접근시 사용자 목록 출력
 * 로그인 상태가 아닐 경우 /user/login.html로 이동
 
-### 요구사항 7 - stylesheet 적용
-* 
+### 요구사항 7 - CSS 지원하기
+* css를 지원하도록 만든다.
 
 ### heroku 서버에 배포 후
 * 
