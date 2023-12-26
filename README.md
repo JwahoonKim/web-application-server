@@ -23,7 +23,7 @@
 * /user/create?userId=""&password=""&name=""&email="" 형태로 받아서 가입시키기
 
 ### 요구사항 3 - post 방식으로 회원가입
-* 
+* 회원가입을 post 요청으로 변경한다.
 
 ### 요구사항 4 - redirect 방식으로 이동
 * 

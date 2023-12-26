@@ -14,6 +14,7 @@ import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils;
+import util.IOUtils;
 
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
@@ -33,7 +34,9 @@ public class RequestHandler extends Thread {
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(in));
             String requestLine = reader.readLine();
-            String path = requestLine.split(" ")[1];
+            String[] split = requestLine.split(" ");
+            String requestMethod = split[0];
+            String path = split[1];
 
             if (path.equals("/index.html")) {
                 Path resourcePath = Paths.get("./webapp/index.html");
@@ -51,7 +54,9 @@ public class RequestHandler extends Thread {
                 return;
             }
 
-            if (path.startsWith("/user/create")) {
+            log.debug(requestMethod);
+
+            if (path.startsWith("/user/create") && requestMethod.equals("GET")) {
                 int index = path.indexOf('?');
                 String params = path.substring(index + 1);
                 Map<String, String> paramMap = HttpRequestUtils.parseQueryString(params);
@@ -64,6 +69,41 @@ public class RequestHandler extends Thread {
                 );
 
                 DataBase.addUser(user);
+                return;
+            }
+
+            if (path.startsWith("/user/create") && requestMethod.equals("POST")) {
+                String line;
+
+                while (true) {
+                    line = reader.readLine();
+                    if (line.startsWith("Content-Length")) {
+                        break;
+                    }
+                }
+
+                int contentLength = Integer.parseInt(line.split(":")[1].trim());
+
+                while (true) {
+                    line = reader.readLine();
+                    if (line.equals("")) {
+                        break;
+                    }
+                }
+
+                String body = IOUtils.readData(reader, contentLength);
+
+                Map<String, String> paramMap = HttpRequestUtils.parseQueryString(body);
+
+                User user = new User(
+                        paramMap.getOrDefault("userId", null),
+                        paramMap.getOrDefault("password", null),
+                        paramMap.getOrDefault("name", null),
+                        paramMap.getOrDefault("email", null)
+                );
+
+                DataBase.addUser(user);
+                log.debug("User: {}", user);
                 return;
             }
 
