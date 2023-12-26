@@ -12,6 +12,7 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.Map;
 
 public class RequestHandler extends Thread {
@@ -36,6 +37,13 @@ public class RequestHandler extends Thread {
             String requestMethod = split[0];
             String path = split[1];
 
+            log.debug("path = {}", path);
+
+            // request를 읽어서 헤더값 map으로 변환하기
+            String headerString = getHeaderString(reader);
+            Map<String, String> headerMap = HttpRequestUtils.parseRequestHeaderString(headerString);
+            log.debug("headerMap : {}", headerMap);
+
             if (path.equals("/index.html")) {
                 Path resourcePath = Paths.get("./webapp/index.html");
                 byte[] body = Files.readAllBytes(resourcePath);
@@ -51,8 +59,6 @@ public class RequestHandler extends Thread {
                 responseBody(dos, body);
                 return;
             }
-
-            log.debug(requestMethod);
 
             if (path.startsWith("/user/create") && requestMethod.equals("GET")) {
                 int index = path.indexOf('?');
@@ -71,25 +77,9 @@ public class RequestHandler extends Thread {
             }
 
             if (path.startsWith("/user/create") && requestMethod.equals("POST")) {
-                String line;
-
-                while (true) {
-                    line = reader.readLine();
-                    if (line.startsWith("Content-Length")) {
-                        break;
-                    }
-                }
-
-                int contentLength = Integer.parseInt(line.split(":")[1].trim());
-
-                while (true) {
-                    line = reader.readLine();
-                    if (line.equals("")) {
-                        break;
-                    }
-                }
-
+                int contentLength = Integer.parseInt(headerMap.get("Content-Length"));
                 String body = IOUtils.readData(reader, contentLength);
+                log.debug("body : {}", body);
 
                 Map<String, String> paramMap = HttpRequestUtils.parseQueryString(body);
 
@@ -102,6 +92,7 @@ public class RequestHandler extends Thread {
 
                 DataBase.addUser(user);
                 response302Header(dos, "/index.html");
+                log.debug("user : {}, 저장 완료", user);
                 return;
             }
 
@@ -114,25 +105,11 @@ public class RequestHandler extends Thread {
             }
 
             if (path.equals("/user/login")) {
-                String line;
-
-                while (true) {
-                    line = reader.readLine();
-                    if (line.startsWith("Content-Length")) {
-                        break;
-                    }
-                }
-
-                int contentLength = Integer.parseInt(line.split(":")[1].trim());
-
-                while (true) {
-                    line = reader.readLine();
-                    if (line.equals("")) {
-                        break;
-                    }
-                }
-
+                int contentLength = Integer.parseInt(headerMap.get("Content-Length"));
                 String body = IOUtils.readData(reader, contentLength);
+
+                log.debug("body : {}", body);
+
                 Map<String, String> paramMap = HttpRequestUtils.parseQueryString(body);
                 User user = DataBase.findUserById(paramMap.getOrDefault("userId", null));
 
@@ -161,12 +138,56 @@ public class RequestHandler extends Thread {
                 return;
             }
 
+            if (path.equals("/user/list")) {
+                // 쿠키 확인
+                String cookies = headerMap.get("Cookie");
+                Map<String, String> cookieMap = HttpRequestUtils.parseCookies(cookies);
+
+                if (Boolean.parseBoolean(cookieMap.get("logined"))) {
+                    Collection<User> users = DataBase.findAll();
+                    // user 정보를 html로 변환
+                    String body = getUserInfoBody(users);
+                    response200Header(dos, body.length());
+                    responseBody(dos, body.getBytes());
+                    return;
+                }
+
+                response302Header(dos, "/user/login.html");
+                return;
+            }
+
             byte[] body = "Hello World".getBytes();
             response200Header(dos, body.length);
             responseBody(dos, body);
         } catch (IOException e) {
             log.error(e.getMessage());
         }
+    }
+
+    private static String getUserInfoBody(Collection<User> users) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<table border='1'>");
+        for (User user : users) {
+            sb.append("<tr>");
+            sb.append("<td>" + user.getUserId() + "</td>");
+            sb.append("<td>" + user.getName() + "</td>");
+            sb.append("<td>" + user.getEmail() + "</td>");
+            sb.append("</tr>");
+        }
+        return sb.toString();
+    }
+
+    private static String getHeaderString(BufferedReader reader) throws IOException {
+        StringBuilder headerStringBuilder = new StringBuilder();
+        while (true) {
+            String line = reader.readLine();
+            if (line == null || line.isEmpty()) {
+                break;
+            }
+            headerStringBuilder.append(line).append("\n");
+        }
+        String headerString = headerStringBuilder.toString();
+        return headerString;
     }
 
     private void response302HeaderWithLoginFailed(DataOutputStream dos, String redirectUri) {
@@ -180,9 +201,10 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void response302Header(DataOutputStream dos, String redirectUri) {
+    private void response302HeaderWithLoginSuccess(DataOutputStream dos, String redirectUri) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found\r\n");
+            dos.writeBytes("Set-Cookie: logined=true; Path=/\r\n");
             dos.writeBytes("Location: " + redirectUri + "\r\n"); // 리다이렉트할 URL을 여기에 넣으세요
             dos.writeBytes("\r\n");
         } catch (IOException e) {
@@ -190,10 +212,9 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void response302HeaderWithLoginSuccess(DataOutputStream dos, String redirectUri) {
+    private void response302Header(DataOutputStream dos, String redirectUri) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found\r\n");
-            dos.writeBytes("Set-Cookie: logined=true; Path=/\r\n");
             dos.writeBytes("Location: " + redirectUri + "\r\n"); // 리다이렉트할 URL을 여기에 넣으세요
             dos.writeBytes("\r\n");
         } catch (IOException e) {

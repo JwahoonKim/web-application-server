@@ -70,4 +70,36 @@ public class HttpRequestUtilsTest {
         Pair pair = HttpRequestUtils.parseHeader(header);
         assertThat(pair, is(new Pair("Content-Length", "59")));
     }
+
+    @Test
+    public void parseRequestHeaderString() {
+        String headerString = "Host: localhost:8080\n" +
+                "Connection: keep-alive\n" +
+                "Content-Length: 59\n" +
+                "Content-Type: application/x-www-form-urlencoded\n" +
+                "Accept: */*\n" +
+                "Origin: http://localhost:8080\n" +
+                "X-Requested-With: XMLHttpRequest\n" +
+                "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) "
+                + "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36\n" +
+                "Referer: http://localhost:8080/user/form.html\n" +
+                "Accept-Encoding: gzip, deflate, br\n" +
+                "Accept-Language: ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4\n" +
+                "Cookie: logined=true; JSessionId=1234";
+
+        Map<String, String> map = HttpRequestUtils.parseRequestHeaderString(headerString);
+        assertThat(map.get("Host"), is("localhost:8080"));
+        assertThat(map.get("Connection"), is("keep-alive"));
+        assertThat(map.get("Content-Length"), is("59"));
+        assertThat(map.get("Content-Type"), is("application/x-www-form-urlencoded"));
+        assertThat(map.get("Accept"), is("*/*"));
+        assertThat(map.get("Origin"), is("http://localhost:8080"));
+        assertThat(map.get("X-Requested-With"), is("XMLHttpRequest"));
+        assertThat(map.get("User-Agent"), is("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) "
+                + "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36"));
+        assertThat(map.get("Referer"), is("http://localhost:8080/user/form.html"));
+        assertThat(map.get("Accept-Encoding"), is("gzip, deflate, br"));
+        assertThat(map.get("Accept-Language"), is("ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4"));
+        assertThat(map.get("Cookie"), is("logined=true; JSessionId=1234"));
+    }
 }

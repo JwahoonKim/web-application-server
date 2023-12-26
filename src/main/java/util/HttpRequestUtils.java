@@ -2,6 +2,7 @@ package util;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Strings;
@@ -51,6 +52,13 @@ public class HttpRequestUtils {
 
     public static Pair parseHeader(String header) {
         return getKeyValue(header, ": ");
+    }
+
+    public static Map<String, String> parseRequestHeaderString(String headerString) {
+        return Arrays.stream(headerString.split("\n"))
+                .map(HttpRequestUtils::parseHeader)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Pair::getKey, Pair::getValue));
     }
 
     public static class Pair {

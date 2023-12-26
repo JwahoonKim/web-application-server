@@ -21,4 +21,11 @@ public class DataBase {
     public static Collection<User> findAll() {
         return users.values();
     }
+
+    public static void insertDefaultUsers() {
+        DataBase.addUser(new User("crong", "1234", "crong", "crong@naver.com"));
+        DataBase.addUser(new User("pobi", "1234", "pobi", "pobi@naver.com"));
+        DataBase.addUser(new User("jk", "1234", "jk", "jk@naver.com"));
+        DataBase.addUser(new User("123", "123", "kim", "kim@naver.com"));
+    }
 }
