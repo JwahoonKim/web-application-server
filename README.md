@@ -19,7 +19,8 @@
 * webapp에 있는 index.html 응답에 내려주기 (헤더, 바디 적절히)
 
 ### 요구사항 2 - get 방식으로 회원가입
-* 
+* 회원가입 누르면 /user/form.html로 연결하기
+* /user/create?userId=""&password=""&name=""&email="" 형태로 받아서 가입시키기
 
 ### 요구사항 3 - post 방식으로 회원가입
 * 
