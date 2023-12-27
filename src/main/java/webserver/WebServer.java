@@ -3,6 +3,7 @@ package webserver;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import controller.RequestMapping;
 import db.DataBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,8 +28,10 @@ public class WebServer {
 
             // 클라이언트가 연결될때까지 대기한다.
             Socket connection;
+            RequestMapping requestMapping = new RequestMapping();
+
             while ((connection = listenSocket.accept()) != null) {
-                RequestHandler requestHandler = new RequestHandler(connection);
+                RequestHandler requestHandler = new RequestHandler(connection, requestMapping);
                 requestHandler.start();
             }
         }
