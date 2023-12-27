@@ -1,13 +1,17 @@
 package webserver;
 
 import db.DataBase;
+import http.HttpMethod;
+import http.HttpRequest;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils;
-import util.IOUtils;
 
-import java.io.*;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,7 +22,7 @@ import java.util.Map;
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
 
-    private Socket connection;
+    private final Socket connection;
 
     public RequestHandler(Socket connectionSocket) {
         this.connection = connectionSocket;
@@ -31,18 +35,12 @@ public class RequestHandler extends Thread {
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
             DataOutputStream dos = new DataOutputStream(out);
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-            String requestLine = reader.readLine();
-            String[] split = requestLine.split(" ");
-            String requestMethod = split[0];
-            String path = split[1];
+            HttpRequest request = new HttpRequest(in);
+
+            HttpMethod requestMethod = request.getMethod();
+            String path = request.getPath();
 
             log.debug("path = {}", path);
-
-            // request를 읽어서 헤더값 map으로 변환하기
-            String headerString = getHeaderString(reader);
-            Map<String, String> headerMap = HttpRequestUtils.parseRequestHeaderString(headerString);
-            log.debug("headerMap : {}", headerMap);
 
             if (path.equals("/index.html")) {
                 Path resourcePath = Paths.get("./webapp/index.html");
@@ -60,34 +58,24 @@ public class RequestHandler extends Thread {
                 return;
             }
 
-            if (path.startsWith("/user/create") && requestMethod.equals("GET")) {
-                int index = path.indexOf('?');
-                String params = path.substring(index + 1);
-                Map<String, String> paramMap = HttpRequestUtils.parseQueryString(params);
-
+            if (path.equals("/user/create") && requestMethod.isGetMethod()) {
                 User user = new User(
-                        paramMap.getOrDefault("userId", null),
-                        paramMap.getOrDefault("password", null),
-                        paramMap.getOrDefault("name", null),
-                        paramMap.getOrDefault("email", null)
+                        request.getHeader("userId"),
+                        request.getHeader("password"),
+                        request.getHeader("name"),
+                        request.getHeader("email")
                 );
 
                 DataBase.addUser(user);
                 return;
             }
 
-            if (path.startsWith("/user/create") && requestMethod.equals("POST")) {
-                int contentLength = Integer.parseInt(headerMap.get("Content-Length"));
-                String body = IOUtils.readData(reader, contentLength);
-                log.debug("body : {}", body);
-
-                Map<String, String> paramMap = HttpRequestUtils.parseQueryString(body);
-
+            if (path.equals("/user/create") && requestMethod.isPostMethod()) {
                 User user = new User(
-                        paramMap.getOrDefault("userId", null),
-                        paramMap.getOrDefault("password", null),
-                        paramMap.getOrDefault("name", null),
-                        paramMap.getOrDefault("email", null)
+                        request.getHeader("userId"),
+                        request.getHeader("password"),
+                        request.getHeader("name"),
+                        request.getHeader("email")
                 );
 
                 DataBase.addUser(user);
@@ -105,13 +93,7 @@ public class RequestHandler extends Thread {
             }
 
             if (path.equals("/user/login")) {
-                int contentLength = Integer.parseInt(headerMap.get("Content-Length"));
-                String body = IOUtils.readData(reader, contentLength);
-
-                log.debug("body : {}", body);
-
-                Map<String, String> paramMap = HttpRequestUtils.parseQueryString(body);
-                User user = DataBase.findUserById(paramMap.getOrDefault("userId", null));
+                User user = DataBase.findUserById(request.getParameter("userId"));
 
                 // 로그인 실패시 login_failed.html로 리다이렉트
                 if (user == null) {
@@ -119,7 +101,7 @@ public class RequestHandler extends Thread {
                     return;
                 }
 
-                if (!paramMap.get("password").equals(user.getPassword())) {
+                if (!request.getParameter("password").equals(user.getPassword())) {
                     response302HeaderWithLoginFailed(dos, "/user/login_failed.html");
                     return;
                 }
@@ -139,13 +121,8 @@ public class RequestHandler extends Thread {
             }
 
             if (path.equals("/user/list")) {
-                // 쿠키 확인
-                String cookies = headerMap.get("Cookie");
-                Map<String, String> cookieMap = HttpRequestUtils.parseCookies(cookies);
-
-                if (Boolean.parseBoolean(cookieMap.get("logined"))) {
+                if (request.isLogin()) {
                     Collection<User> users = DataBase.findAll();
-                    // user 정보를 html로 변환
                     String body = getUserInfoBody(users);
                     response200Header(dos, body.length());
                     responseBody(dos, body.getBytes());
@@ -202,19 +179,6 @@ public class RequestHandler extends Thread {
             sb.append("</tr>");
         }
         return sb.toString();
-    }
-
-    private static String getHeaderString(BufferedReader reader) throws IOException {
-        StringBuilder headerStringBuilder = new StringBuilder();
-        while (true) {
-            String line = reader.readLine();
-            if (line == null || line.isEmpty()) {
-                break;
-            }
-            headerStringBuilder.append(line).append("\n");
-        }
-        String headerString = headerStringBuilder.toString();
-        return headerString;
     }
 
     private void response302HeaderWithLoginFailed(DataOutputStream dos, String redirectUri) {
