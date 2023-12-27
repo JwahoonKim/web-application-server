@@ -72,7 +72,14 @@ public class HttpRequest {
     }
 
     public boolean isLogin() {
-        String logined = this.parameters.getOrDefault("logined", null);
+        String cookies = this.headers.getOrDefault("Cookie", null);
+        if (cookies == null) {
+            return false;
+        }
+
+        String logined = HttpRequestUtils.parseCookies(cookies)
+                .getOrDefault("logined", null);
+
         return Boolean.parseBoolean(logined);
     }
 }
